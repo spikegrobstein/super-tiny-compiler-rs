@@ -1,0 +1,7 @@
+[package]
+name = "tiny-compiler"
+version = "0.1.0"
+authors = ["Spike Grobstein <sgrobstein@apple.com>"]
+edition = "2018"
+
+[dependencies]
