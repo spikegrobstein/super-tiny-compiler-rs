@@ -2,10 +2,10 @@ fn main() {
     let tokens = tokenizer("(add 2 (subtract 4 2))");
     println!("{:?}", tokens);
 
-    // let ast = parser(tokens);
+    let ast = parser(tokens);
 
-    // println!("");
-    // println!("{:?}", ast);
+    println!("");
+    println!("{:?}", ast);
 }
 
 #[derive(Debug, PartialEq)]
@@ -87,53 +87,62 @@ fn tokenizer(data: &str) -> Vec<Token> {
     tokens
 }
 
+fn walk<'a, I>(tokens: &mut std::iter::Peekable<I>) -> Ast
+where
+    I: std::iter::Iterator<Item = &'a Token<'static>>
+{
+    let token = tokens.next().unwrap();
 
-// fn walk(current: usize, tokens: &Vec<Token>) -> Ast {
-    // let token = &tokens[current];
+    match token {
+        Token::Integer(value) => {
+            Ast::IntegerLiteral(i64::from_str_radix(value, 10).unwrap())
+        },
+        Token::Char(value) => {
+            Ast::StringLiteral(value.to_string())
+        }
+        Token::Paren('(') => {
+            let token = tokens.next().unwrap(); // skip the ( and get the next token, which shoulld be a name
 
-    // match token {
-        // Token::Integer(value) => {
-            // let current = current + 1;
-            // Ast::IntegerLiteral(i64::from_str_radix(value, 10).unwrap())
-        // },
-        // Token::Char(value) => {
-            // let current = current + 1;
-            // Ast::StringLiteral(value.to_string())
-        // }
-        // Token::Paren('(') => {
-            // let current = current + 1;
-            // let token = &tokens[current]; // skip the ( and get the next token, which shoulld be a name
+            // save the call expression name as a legit String
+            let call_expression_name = match token {
+                Token::Name(name) => name.to_string(),
+                token => panic!("Expected Token::Name, but got {:?}", token),
+            };
 
-            // // save the call expression name as a legit String
-            // let call_expression_name = match token {
-                // Token::Name(name) => name.to_string(),
-                // token => panic!("Expected Token::Name, but got {:?}", token),
-            // };
+            // let token = tokens.next().unwrap();
 
-            // let current = current + 1;
-            // let token = &tokens[current];
+            let mut params: Vec<Ast> = Vec::new();
 
-            // let mut params: Vec<Ast> = Vec::new();
+            loop {
+                if let Token::Paren(')') = tokens.peek().unwrap() {
+                    // bump the token and break
+                    let _token = tokens.next().unwrap();
+                    break;
+                }
+                params.push(walk(tokens)); 
+            }
 
-            // loop {
-               // params.push(walk(current, tokens)); 
-            // }
-        // },
-        // _ => panic!("oh no")
-    // }
-// }
+            Ast::CallExpression {
+                name: call_expression_name,
+                params,
+            }
+        },
+        _ => panic!("oh no")
+    }
+}
 
-// fn walk<'a, I>(tokens: I) -> Vec<Ast>
-// where
-    // I: Iterator<Item = &'a Token>
-// {
-    // let token = tokens.next();
+fn parser(tokens: Vec<Token<'static>>) -> Ast {
+    let mut tokens = tokens.iter().peekable();
 
-    // vec![]
-// }
+    let mut body: Vec<Ast> = Vec::new();
 
-// fn parser(tokens: Vec<Token>) -> Ast {
-    // let tokens = tokens.iter().peekable();
+    loop {
+        if tokens.peek().is_none() {
+            break;
+        }
 
-    // Ast::Program(walk(tokens))
-// }
+        body.push(walk(&mut tokens));
+    }
+
+    Ast::Program(body)
+}
